@@ -1,5 +1,6 @@
 package com.example.health_connect
 
+import android.content.Context
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
@@ -20,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.UUID
 
-class HealthConnectBridge(private val flutterEngine: FlutterEngine) {
+class HealthConnectBridge(private val applicationContext: Context) {
     companion object {
         private const val TAG = "HealthConnectBridge"
         private const val METHOD_CHANNEL = "com.example.health_connect/method"
@@ -35,7 +36,7 @@ class HealthConnectBridge(private val flutterEngine: FlutterEngine) {
     private val knownStepRecordIds = mutableSetOf<String>()
     private val knownHrRecordIds = mutableSetOf<String>()
 
-    fun configure() {
+    fun configure(flutterEngine: FlutterEngine) {
         val methodChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             METHOD_CHANNEL
@@ -75,9 +76,7 @@ class HealthConnectBridge(private val flutterEngine: FlutterEngine) {
 
     private fun initialize(result: MethodChannel.Result) {
         try {
-            healthConnectClient = HealthConnectClient.getOrCreate(
-                flutterEngine.applicationContext
-            )
+            healthConnectClient = HealthConnectClient.getOrCreate(applicationContext)
             result.success(true)
         } catch (e: Exception) {
             Log.e(TAG, "Health Connect not available", e)
@@ -124,7 +123,7 @@ class HealthConnectBridge(private val flutterEngine: FlutterEngine) {
                     HealthPermission.getReadPermission(StepsRecord::class),
                     HealthPermission.getReadPermission(HeartRateRecord::class)
                 )
-                val granted = client.permissionController.requestPermissions(required)
+                val granted = client.permissionController.getGrantedPermissions()
                 result.success(mapOf(
                     "steps" to (HealthPermission.getReadPermission(StepsRecord::class) in granted),
                     "heartRate" to (HealthPermission.getReadPermission(HeartRateRecord::class) in granted),
@@ -179,7 +178,7 @@ class HealthConnectBridge(private val flutterEngine: FlutterEngine) {
                 val latest = response.records
                     .flatMap { record ->
                         record.samples.map { sample ->
-                            mapOf("bpm" to sample.bpm, "timestamp" to record.startTime.toEpochMilli())
+                            mapOf("bpm" to sample.beatsPerMinute, "timestamp" to record.startTime.toEpochMilli())
                         }
                     }
                     .maxByOrNull { it["timestamp"] as Long }
@@ -259,7 +258,7 @@ class HealthConnectBridge(private val flutterEngine: FlutterEngine) {
                         mapOf(
                             "type" to "heartRate",
                             "timestamp" to record.startTime.toEpochMilli(),
-                            "value" to sample.bpm.toDouble(),
+                            "value" to sample.beatsPerMinute.toDouble(),
                             "sourceId" to (record.metadata.dataOrigin.packageName ?: ""),
                             "recordId" to (record.metadata.id ?: UUID.randomUUID().toString())
                         )
@@ -343,7 +342,7 @@ class HealthConnectBridge(private val flutterEngine: FlutterEngine) {
                             mapOf(
                                 "type" to "heartRate",
                                 "timestamp" to record.startTime.toEpochMilli(),
-                                "value" to sample.bpm.toDouble(),
+                                "value" to sample.beatsPerMinute.toDouble(),
                                 "sourceId" to (record.metadata.dataOrigin.packageName ?: ""),
                                 "recordId" to record.metadata.id
                             )

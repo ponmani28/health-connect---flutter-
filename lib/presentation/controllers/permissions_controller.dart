@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:health/health.dart';
 import '../../data/repositories/health_repository.dart';
 
 class PermissionsController extends GetxController {
@@ -50,13 +51,20 @@ class PermissionsController extends GetxController {
     errorMessage.value = '';
 
     try {
-      final result = await _repository.requestPermissions();
-      stepsGranted.value = result['steps'] == true;
-      heartRateGranted.value = result['heartRate'] == true;
-      allGranted.value = result['allGranted'] == true;
+      final health = Health();
+      final types = [HealthDataType.STEPS, HealthDataType.HEART_RATE];
+      final requested = await health.requestAuthorization(types);
+      stepsGranted.value = requested;
+      heartRateGranted.value = requested;
+      allGranted.value = requested;
 
-      if (!allGranted.value && result['error'] != null) {
-        errorMessage.value = result['error'] as String;
+      if (!allGranted.value) {
+        errorMessage.value = 'Permissions not fully granted';
+      } else {
+        final result = await _repository.checkPermissions();
+        stepsGranted.value = result['steps'] == true;
+        heartRateGranted.value = result['heartRate'] == true;
+        allGranted.value = result['allGranted'] == true;
       }
     } catch (e) {
       errorMessage.value = 'Failed to request permissions: $e';

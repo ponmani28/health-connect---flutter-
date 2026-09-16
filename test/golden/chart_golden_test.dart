@@ -38,22 +38,25 @@ void main() {
   }) {
     return MaterialApp(
       home: Scaffold(
-        body: RepaintBoundary(
-          child: CustomPaint(
-            size: const Size(320, 240),
-            painter: ChartPainter(
-              points: points,
-              lineColor: lineColor,
-              areaColor: areaColor,
-              gridColor: Colors.grey.withValues(alpha: 0.3),
-              axisTextColor: Colors.grey,
-              title: title,
-              unit: 'units',
-              highlightedPoint: null,
-              viewportStartMs: viewportStartMs,
-              viewportEndMs: viewportEndMs,
-              minValue: minValue,
-              maxValue: maxValue,
+        body: Center(
+          child: RepaintBoundary(
+            key: const Key('chart-under-test'),
+            child: CustomPaint(
+              size: const Size(320, 240),
+              painter: ChartPainter(
+                points: points,
+                lineColor: lineColor,
+                areaColor: areaColor,
+                gridColor: Colors.grey.withValues(alpha: 0.3),
+                axisTextColor: Colors.grey,
+                title: title,
+                unit: 'units',
+                highlightedPoint: null,
+                viewportStartMs: viewportStartMs,
+                viewportEndMs: viewportEndMs,
+                minValue: minValue,
+                maxValue: maxValue,
+              ),
             ),
           ),
         ),
@@ -80,7 +83,7 @@ void main() {
     ));
 
     await expectLater(
-      find.byType(CustomPaint),
+      find.byKey(const Key('chart-under-test')),
       matchesGoldenFile('goldens/heart_rate_chart.png'),
     );
   });
@@ -104,7 +107,7 @@ void main() {
     ));
 
     await expectLater(
-      find.byType(CustomPaint),
+      find.byKey(const Key('chart-under-test')),
       matchesGoldenFile('goldens/steps_chart.png'),
     );
   });

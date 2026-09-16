@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/constants.dart';
@@ -20,11 +21,12 @@ class DashboardPage extends StatelessWidget {
             title: const Text('Live Health Dashboard'),
             backgroundColor: Theme.of(context).colorScheme.inversePrimary,
             actions: [
-              IconButton(
-                icon: const Icon(Icons.developer_mode),
-                tooltip: 'Debug',
-                onPressed: () => Get.toNamed('/debug'),
-              ),
+              if (kDebugMode)
+                IconButton(
+                  icon: const Icon(Icons.developer_mode),
+                  tooltip: 'Debug',
+                  onPressed: () => Get.toNamed('/debug'),
+                ),
             ],
           ),
           drawer: Drawer(
@@ -62,7 +64,9 @@ class DashboardPage extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Icons.developer_mode),
                   title: const Text('Debug & Simulation'),
-                  onTap: () => Get.toNamed('/debug'),
+                  onTap: () {
+                    if (kDebugMode) Get.toNamed('/debug');
+                  },
                 ),
               ],
             ),

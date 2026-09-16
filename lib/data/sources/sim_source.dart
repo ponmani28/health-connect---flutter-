@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import '../models/health_event.dart';
 
 class SimSource {
@@ -20,6 +21,7 @@ class SimSource {
   bool get isActive => _isActive;
 
   void start() {
+    if (kReleaseMode) return;
     if (_isActive) return;
     _isActive = true;
     _controller ??= StreamController<HealthEvent>.broadcast();

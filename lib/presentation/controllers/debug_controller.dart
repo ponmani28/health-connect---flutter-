@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import '../../data/repositories/health_repository.dart';
 import '../../data/sources/sim_source.dart';
-import '../../data/models/health_event.dart';
 
 class DebugController extends GetxController {
   final HealthRepository _repository;

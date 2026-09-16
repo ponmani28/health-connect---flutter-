@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/constants.dart';
 import '../../data/models/chart_point.dart';
 
 class ChartPainter extends CustomPainter {
@@ -48,8 +47,9 @@ class ChartPainter extends CustomPainter {
   late final Paint _linePaint;
   late final Paint _areaPaint;
   late final Paint _gridPaint;
-  late final Paint _axisPaint;
-  late final Paint _highlightPaint;
+  late final Paint _highlightGuidePaint;
+  late final Paint _highlightDotPaint;
+  late final Paint _highlightHaloPaint;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -65,7 +65,7 @@ class ChartPainter extends CustomPainter {
     _drawGrid(canvas, plotRect);
     _drawArea(canvas, plotRect);
     _drawXLabels(canvas, plotRect);
-    _drawLegend(canvas, size);
+    _drawLegend(canvas);
     _drawHighlight(canvas, plotRect);
   }
 
@@ -87,27 +87,22 @@ class ChartPainter extends CustomPainter {
       ..strokeWidth = 0.5
       ..style = PaintingStyle.stroke;
 
-    _axisPaint = Paint()
-      ..color = axisTextColor
-      ..style = PaintingStyle.fill;
-
-    _highlightPaint = Paint()
-      ..color = lineColor.withOpacity(1.0)
-      ..strokeWidth = 2.5
+    _highlightGuidePaint = Paint()
+      ..color = lineColor.withValues(alpha: 0.4)
+      ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
-  }
 
-  Rect _getPlotRect(Size size) {
-    return Rect.fromLTRB(
-      _paddingLeft,
-      _paddingTop,
-      size.width - _paddingRight,
-      size.height - _paddingBottom,
-    );
+    _highlightDotPaint = Paint()
+      ..color = lineColor
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    _highlightHaloPaint = Paint()
+      ..color = lineColor.withValues(alpha: 0.3)
+      ..style = PaintingStyle.fill;
   }
 
   void _drawGrid(Canvas canvas, Rect plotRect) {
-    final stepMs = (viewportEndMs - viewportStartMs) / 4;
     for (var i = 0; i <= 4; i++) {
       final t = i / 4;
       final x = plotRect.left + plotRect.width * t;
@@ -226,7 +221,7 @@ class ChartPainter extends CustomPainter {
     final spanMs = viewportEndMs - viewportStartMs;
     if (spanMs <= 0) return anchors;
 
-    final labelCount = 4;
+    const labelCount = 4;
     for (var i = 0; i <= labelCount; i++) {
       final targetMs = viewportStartMs + spanMs * (i / labelCount);
       final anchor = _findNearestPointTime(targetMs);
@@ -264,20 +259,13 @@ class ChartPainter extends CustomPainter {
 
     final guideLine = Path()..moveTo(x, plotRect.top);
     guideLine.lineTo(x, plotRect.bottom);
-    canvas.drawPath(guideLine, _highlightPaint..color = _highlightPaint.color.withOpacity(0.4));
+    canvas.drawPath(guideLine, _highlightGuidePaint);
 
-    canvas.drawCircle(
-        Offset(x, y), 4.0, Paint()..color = lineColor);
-    canvas.drawCircle(
-      Offset(x, y),
-      7.0,
-      Paint()
-        ..color = lineColor.withOpacity(0.3)
-        ..style = PaintingStyle.fill,
-    );
+    canvas.drawCircle(Offset(x, y), 4.0, _highlightDotPaint);
+    canvas.drawCircle(Offset(x, y), 7.0, _highlightHaloPaint);
   }
 
-  void _drawLegend(Canvas canvas, Size size) {
+  void _drawLegend(Canvas canvas) {
     final textPainter = _buildTextPainter(title);
     textPainter.paint(canvas, const Offset(10, 2));
   }

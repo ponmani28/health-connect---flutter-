@@ -68,10 +68,9 @@ class DashboardPage extends StatelessWidget {
           body: SafeArea(
             child: RefreshIndicator(
               onRefresh: () async {
-                await controller._repository.loadInitialData();
+                await controller.refreshData();
               },
               child: Obx(() {
-                controller.perfMonitor.recordBuildTime(1.2);
                 return _buildContent(context, controller);
               }),
             ),
@@ -83,8 +82,6 @@ class DashboardPage extends StatelessWidget {
 
   Widget _buildContent(
       BuildContext context, DashboardController controller) {
-    final theme = Theme.of(context);
-
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -134,9 +131,9 @@ class DashboardPage extends StatelessWidget {
             child: SizedBox(
               height: 260,
               child: HealthChart(
-                points: controller.stepsChartData.value,
+                points: controller.stepsChartData,
                 lineColor: Colors.blue,
-                areaColor: Colors.blue.withOpacity(0.15),
+                areaColor: Colors.blue.withValues(alpha: 0.15),
                 title: 'Step Count',
                 unit: 'steps',
                 window: const Duration(minutes: AppConstants.chartWindowMinutes),
@@ -154,9 +151,9 @@ class DashboardPage extends StatelessWidget {
             child: SizedBox(
               height: 260,
               child: HealthChart(
-                points: controller.hrChartData.value,
+                points: controller.hrChartData,
                 lineColor: Colors.red,
-                areaColor: Colors.red.withOpacity(0.15),
+                areaColor: Colors.red.withValues(alpha: 0.15),
                 title: 'Heart Rate',
                 unit: 'bpm',
                 window: const Duration(minutes: AppConstants.chartWindowMinutes),

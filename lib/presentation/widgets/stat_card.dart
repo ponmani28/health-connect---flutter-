@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../data/models/chart_point.dart';
@@ -150,13 +149,13 @@ class PerformanceHud extends StatelessWidget {
           const _HudDivider(),
           _buildMetric(
             label: 'FPS',
-            value: '${fps.toStringAsFixed(0)}',
+            value: fps.toStringAsFixed(0),
             ok: fps >= AppConstants.targetFps - 5,
           ),
           const _HudDivider(),
           _buildMetric(
             label: 'Updates',
-            value: '$updateCount',
+            value: updateCount.toString(),
             ok: true,
           ),
         ],

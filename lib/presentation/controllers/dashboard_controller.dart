@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:get/get.dart';
+import '../../data/models/chart_point.dart';
 import '../../data/models/health_event.dart';
 import '../../data/repositories/health_repository.dart';
 import '../../core/constants.dart';
@@ -63,7 +64,7 @@ class DashboardController extends GetxController {
   }
 
   void _updateStepsChart() {
-    final window = const Duration(minutes: AppConstants.chartWindowMinutes);
+    const window = Duration(minutes: AppConstants.chartWindowMinutes);
     final events = _repository.getStepsEventsInWindow(window);
     final bucketed = _bucketizeEvents(
       events,
@@ -73,7 +74,7 @@ class DashboardController extends GetxController {
   }
 
   void _updateHrChart() {
-    final window = const Duration(minutes: AppConstants.chartWindowMinutes);
+    const window = Duration(minutes: AppConstants.chartWindowMinutes);
     final events = _repository.getHeartRateEventsInWindow(window);
     final bucketed = _bucketizeEvents(
       events,
@@ -101,7 +102,7 @@ class DashboardController extends GetxController {
       buckets.putIfAbsent(bucketKey, () => []).add(event);
     }
 
-    return buckets.entries.map((entry) {
+    return buckets.entries.map<ChartPoint>((entry) {
       final avg = entry.value.map((e) => e.value).reduce((a, b) => a + b) /
           entry.value.length;
       return ChartPoint(timestamp: entry.key, value: avg);
@@ -158,6 +159,12 @@ class DashboardController extends GetxController {
       _repository.startSimListening();
       _repository.startSimSource();
     }
+  }
+
+  Future<void> refreshData() async {
+    await _repository.loadInitialData();
+    _updateStepsChart();
+    _updateHrChart();
   }
 
   @override

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/constants.dart';
+import '../../core/decimator.dart';
 import '../../data/models/chart_point.dart';
 import 'chart_painter.dart';
 
@@ -33,10 +33,7 @@ class _HealthChartState extends State<HealthChart> {
   double _minValue = 0;
   double _maxValue = 100;
   ChartPoint? _highlightedPoint;
-  double _gestureStartMs = 0;
-  double _gestureStartWidthMs = 0;
   double _lastFocalDx = 0;
-  double _lastFocalDy = 0;
 
   @override
   void initState() {
@@ -93,29 +90,26 @@ class _HealthChartState extends State<HealthChart> {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onScaleStart: (details) {
-            _gestureStartMs = _viewportStartMs;
-            _gestureStartWidthMs = _viewportEndMs - _viewportStartMs;
             _lastFocalDx = details.focalPoint.dx;
-            _lastFocalDy = details.focalPoint.dy;
           },
           onScaleUpdate: (details) {
             final focalDeltaDx = details.focalPoint.dx - _lastFocalDx;
 
             if (details.scale != 1.0 && details.pointerCount >= 2) {
-              _handlePinchZoom(details);
+              _handlePinchZoom(details, constraints.maxWidth);
             } else if (focalDeltaDx != 0 && details.pointerCount == 1) {
-              _handlePan(focalDeltaDx);
+              _handlePan(focalDeltaDx, constraints.maxWidth);
             }
 
             _lastFocalDx = details.focalPoint.dx;
-            _lastFocalDy = details.focalPoint.dy;
           },
           onScaleEnd: (details) {
             widget.onViewportChanged?.call();
           },
           onTapDown: (details) {
             setState(() {
-              _highlightedPoint = _findHighlight(details.localPosition);
+              _highlightedPoint = _findHighlight(
+                  details.localPosition, constraints.maxWidth);
             });
           },
           child: CustomPaint(
@@ -124,8 +118,8 @@ class _HealthChartState extends State<HealthChart> {
               points: widget.points,
               lineColor: widget.lineColor,
               areaColor: widget.areaColor,
-              gridColor: theme.dividerColor.withOpacity(0.3),
-              axisTextColor: theme.colorScheme.onSurface.withOpacity(0.6),
+              gridColor: theme.dividerColor.withValues(alpha: 0.3),
+              axisTextColor: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               title: widget.title,
               unit: widget.unit,
               highlightedPoint: _highlightedPoint,
@@ -140,10 +134,10 @@ class _HealthChartState extends State<HealthChart> {
     );
   }
 
-  void _handlePan(double deltaDx) {
+  void _handlePan(double deltaDx, double chartWidth) {
     setState(() {
       final widthMs = _viewportEndMs - _viewportStartMs;
-      final dxToMs = widthMs / 300.0;
+      final dxToMs = widthMs / chartWidth;
       final shift = -deltaDx * dxToMs;
       final newStart = _viewportStartMs + shift;
       final newEnd = _viewportEndMs + shift;
@@ -153,12 +147,14 @@ class _HealthChartState extends State<HealthChart> {
 
       if (newEnd > nowMs) {
         final overflow = newEnd - nowMs;
-        final clampedStart = (_viewportStartMs - overflow).clamp(bounds.$1, bounds.$2 - widthMs);
+        final clampedStart = ((_viewportStartMs - overflow))
+            .clamp(bounds.$1, bounds.$2 - widthMs);
         _viewportStartMs = clampedStart;
         _viewportEndMs = clampedStart + widthMs;
       } else if (newStart < bounds.$1) {
         final underflow = bounds.$1 - newStart;
-        final clampedEnd = (_viewportEndMs + underflow).clamp(bounds.$1 + widthMs, nowMs);
+        final clampedEnd = (_viewportEndMs + underflow)
+            .clamp(bounds.$1 + widthMs, nowMs);
         _viewportEndMs = clampedEnd;
         _viewportStartMs = clampedEnd - widthMs;
       } else {
@@ -176,8 +172,8 @@ class _HealthChartState extends State<HealthChart> {
       return (now - widget.window.inMilliseconds.toDouble(), now);
     }
 
-    final first = widget.points.first.timestamp.millisecondsSinceEpoch.toDouble();
-    final last = widget.points.last.timestamp.millisecondsSinceEpoch.toDouble();
+    final first =
+        widget.points.first.timestamp.millisecondsSinceEpoch.toDouble();
     final now = DateTime.now().millisecondsSinceEpoch.toDouble();
 
     final min = first < now - widget.window.inMilliseconds.toDouble()
@@ -186,21 +182,20 @@ class _HealthChartState extends State<HealthChart> {
     return (min, now);
   }
 
-  void _handlePinchZoom(details) {
+  void _handlePinchZoom(ScaleUpdateDetails details, double chartWidth) {
     setState(() {
       final widthMs = _viewportEndMs - _viewportStartMs;
       final newWidthMs = (widthMs / details.scale).clamp(
-        widget.window.inMilliseconds.toDouble() / 20.0,
-        widget.window.inMilliseconds.toDouble(),
-      );
+            widget.window.inMilliseconds.toDouble() / 20.0,
+            widget.window.inMilliseconds.toDouble(),
+          );
 
-      final focalRatio = _computeFocalRatio(details.focalPoint.dx);
-      final centerMs =
-          _viewportStartMs + widthMs * focalRatio;
+      final focalRatio = _computeFocalRatio(details.focalPoint.dx, chartWidth);
+      final centerMs = _viewportStartMs + widthMs * focalRatio;
       final newStart = (centerMs - newWidthMs * focalRatio).clamp(
-        _getDataBoundsMs().$1,
-        _getDataBoundsMs().$2 - newWidthMs,
-      );
+            _getDataBoundsMs().$1,
+            _getDataBoundsMs().$2 - newWidthMs,
+          );
       _viewportStartMs = newStart;
       _viewportEndMs = newStart + newWidthMs;
 
@@ -208,27 +203,27 @@ class _HealthChartState extends State<HealthChart> {
     });
   }
 
-  double _computeFocalRatio(double focalDx) {
+  double _computeFocalRatio(double focalDx, double chartWidth) {
     const paddingLeft = 8.0;
     const paddingRight = 8.0;
-    final chartWidth = 300.0;
     final effectiveWidth = chartWidth - paddingLeft - paddingRight;
     if (effectiveWidth <= 0) return 0.5;
     return ((focalDx - paddingLeft) / effectiveWidth).clamp(0.0, 1.0);
   }
 
-  ChartPoint? _findHighlight(Offset localPosition) {
+  ChartPoint? _findHighlight(Offset localPosition, double chartWidth) {
     if (widget.points.isEmpty) return null;
 
     const paddingLeft = 8.0;
     const paddingRight = 8.0;
+    const chartHeight = 240.0;
     const paddingBottom = 28.0;
-    final chartWidth = 300.0;
-    final chartHeight = 240.0;
     final plotWidth = chartWidth - paddingLeft - paddingRight;
-    final plotHeight = chartHeight - paddingBottom;
+    const plotHeight = chartHeight - paddingBottom;
+    if (plotWidth <= 0) return null;
 
-    final xRatio = ((localPosition.dx - paddingLeft) / plotWidth).clamp(0.0, 1.0);
+    final xRatio = ((localPosition.dx - paddingLeft) / plotWidth)
+        .clamp(0.0, 1.0);
     final fakeRect = Rect.fromLTRB(
       paddingLeft,
       0,

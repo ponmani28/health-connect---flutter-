@@ -103,7 +103,7 @@ void main() {
           value: 30,
         ),
       ];
-      final rect = Rect.fromLTRB(10, 0, 210, 100);
+      const rect = Rect.fromLTRB(10, 0, 210, 100);
 
       final middle = ChartMathUtils.findNearest(
         points,
@@ -127,7 +127,7 @@ void main() {
       final nearest = ChartMathUtils.findNearest(
         [],
         const Offset(50, 50),
-        Rect.fromLTWH(0, 0, 100, 100),
+        const Rect.fromLTWH(0, 0, 100, 100),
         minTime: DateTime(2026),
         maxTime: DateTime(2026, 1, 2),
         minValue: 0,

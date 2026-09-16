@@ -132,11 +132,19 @@ class DashboardController extends GetxController {
     }
   }
 
+  void updateAgeForTest() {
+    _updateHeartRateAge();
+  }
+
   void _updatePerfHud() {
     avgBuildTimeMs.value = perfMonitor.avgBuildTimeMs;
     lastPaintTimeMs.value = perfMonitor.lastPaintTimeMs;
     fps.value = perfMonitor.fps;
     meetsBuildTarget.value = perfMonitor.meetsBuildTarget;
+  }
+
+  void updatePerfHudForTest() {
+    _updatePerfHud();
   }
 
   void loadTestData(List<HealthEvent> events) {

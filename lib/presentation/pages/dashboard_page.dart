@@ -6,12 +6,14 @@ import '../widgets/health_chart.dart';
 import '../widgets/stat_card.dart';
 
 class DashboardPage extends StatelessWidget {
-  const DashboardPage({super.key});
+  final DashboardController? controller;
+
+  const DashboardPage({super.key, this.controller});
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<DashboardController>(
-      init: DashboardController(),
+      init: controller ?? DashboardController(),
       builder: (controller) {
         return Scaffold(
           appBar: AppBar(

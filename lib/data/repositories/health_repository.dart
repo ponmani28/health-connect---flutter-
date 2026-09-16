@@ -89,6 +89,11 @@ class HealthRepository {
     });
   }
 
+  void stopSimListening() {
+    _simSubscription?.cancel();
+    _simSubscription = null;
+  }
+
   void startSimSource() => _simSource.start();
   void stopSimSource() => _simSource.stop();
   bool get isSimActive => _simSource.isActive;
@@ -178,6 +183,20 @@ class HealthRepository {
     }
     _flushBuffer();
   }
+
+  void injectForTest(HealthEvent event) {
+    _processEvent(event);
+  }
+
+  void startTestOnly() {}
+
+  void flushForTest() {
+    _flushBuffer();
+  }
+
+  int get stepsEventsCount => getStepsEvents().length;
+
+  int get heartRateEventsCount => getHeartRateEvents().length;
 
   void clearEvents() {
     allEvents.clear();

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- TODO: Replace with the real privacy policy URL of this app. This is the link
+         users open from the Health Connect permissions screen ("view data & access"). -->
+    <string name="health_connect_privacy_policy_url">https://example.com/health-connect-privacy-policy</string>
+    <string name="health_connect_privacy_title">Permission rationale</string>
+    <string name="health_connect_open_privacy_policy">Open privacy policy</string>
+    <string name="health_connect_privacy_body">This app reads and writes steps and heart-rate data through Health Connect.
+        Data is processed only on device to display your live health dashboard. No data is sent to a server.
+        \n\nYou can revoke access at any time from Health Connect &gt; Data &amp; access.
+        \n\nThe button below opens this app\'s privacy policy.</string>
+</resources>

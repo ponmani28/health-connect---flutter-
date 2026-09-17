@@ -1,7 +1,11 @@
 package com.example.health_connect
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
@@ -21,7 +25,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.UUID
 
-class HealthConnectBridge(private val applicationContext: Context) {
+class HealthConnectBridge(private val activity: ComponentActivity) {
     companion object {
         private const val TAG = "HealthConnectBridge"
         private const val METHOD_CHANNEL = "com.example.health_connect/method"
@@ -29,12 +33,34 @@ class HealthConnectBridge(private val applicationContext: Context) {
         private const val POLL_INTERVAL_MS = 5000L
     }
 
+    private val applicationContext: Context = activity.applicationContext
     private var healthConnectClient: HealthConnectClient? = null
+    private var pendingPermissionResult: MethodChannel.Result? = null
     private var eventSink: EventChannel.EventSink? = null
     private var scheduler: ScheduledExecutorService? = null
     private val isListening = AtomicBoolean(false)
     private val knownStepRecordIds = mutableSetOf<String>()
     private val knownHrRecordIds = mutableSetOf<String>()
+
+    private val permissionLauncher: ActivityResultLauncher<Set<String>> =
+        activity.registerForActivityResult(
+            PermissionController.createRequestPermissionResultContract()
+        ) { grantedPermissionIds ->
+            val required = setOf(
+                HealthPermission.getReadPermission(StepsRecord::class),
+                HealthPermission.getReadPermission(HeartRateRecord::class)
+            )
+            val stepsGranted =
+                HealthPermission.getReadPermission(StepsRecord::class) in grantedPermissionIds
+            val heartRateGranted =
+                HealthPermission.getReadPermission(HeartRateRecord::class) in grantedPermissionIds
+            pendingPermissionResult?.success(mapOf(
+                "steps" to stepsGranted,
+                "heartRate" to heartRateGranted,
+                "allGranted" to (stepsGranted && heartRateGranted)
+            ))
+            pendingPermissionResult = null
+        }
 
     fun configure(flutterEngine: FlutterEngine) {
         val methodChannel = MethodChannel(
@@ -57,6 +83,7 @@ class HealthConnectBridge(private val applicationContext: Context) {
                 "stopListening" -> stopListening(result)
                 "readStepsRange" -> readStepsRange(call.arguments as Map<*, *>, result)
                 "readHeartRateRange" -> readHeartRateRange(call.arguments as Map<*, *>, result)
+                "openHealthConnectStore" -> openHealthConnectStore(result)
                 else -> result.notImplemented()
             }
         }
@@ -76,10 +103,39 @@ class HealthConnectBridge(private val applicationContext: Context) {
 
     private fun initialize(result: MethodChannel.Result) {
         try {
-            healthConnectClient = HealthConnectClient.getOrCreate(applicationContext)
-            result.success(true)
+            when (HealthConnectClient.getSdkStatus(applicationContext)) {
+                HealthConnectClient.SDK_AVAILABLE -> {
+                    healthConnectClient = HealthConnectClient.getOrCreate(applicationContext)
+                    result.success(mapOf("available" to true))
+                }
+                HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> {
+                    Log.e(TAG, "Health Connect app requires an update")
+                    result.success(mapOf("available" to false, "status" to "update_required"))
+                }
+                else -> {
+                    Log.e(TAG, "Health Connect app is not installed")
+                    result.success(mapOf("available" to false, "status" to "not_installed"))
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Health Connect not available", e)
+            result.success(mapOf(
+                "available" to false,
+                "status" to "not_available",
+                "error" to (e.message ?: e.toString())
+            ))
+        }
+    }
+
+    private fun openHealthConnectStore(result: MethodChannel.Result) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("market://details?id=com.google.android.apps.healthdata")
+            }
+            activity.startActivity(intent)
+            result.success(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open Health Connect store", e)
             result.success(false)
         }
     }
@@ -87,7 +143,7 @@ class HealthConnectBridge(private val applicationContext: Context) {
     private fun checkPermissions(result: MethodChannel.Result) {
         val client = healthConnectClient
         if (client == null) {
-            result.success(mapOf("granted" to false, "error" to "Not initialized"))
+            result.success(mapOf("steps" to false, "heartRate" to false, "allGranted" to false, "error" to "Not initialized"))
             return
         }
 
@@ -106,32 +162,29 @@ class HealthConnectBridge(private val applicationContext: Context) {
             }
             result.success(scope)
         } catch (e: Exception) {
-            result.success(mapOf("granted" to false, "error" to e.message))
+            Log.e(TAG, "checkPermissions failed", e)
+            result.success(mapOf("steps" to false, "heartRate" to false, "allGranted" to false, "error" to (e.message ?: e.toString())))
         }
     }
 
     private fun requestPermissions(result: MethodChannel.Result) {
         val client = healthConnectClient
         if (client == null) {
-            result.success(mapOf("granted" to false, "error" to "Not initialized"))
+            result.success(mapOf("steps" to false, "heartRate" to false, "allGranted" to false, "error" to "Not initialized"))
             return
         }
 
         try {
-            kotlinx.coroutines.runBlocking {
-                val required = setOf(
-                    HealthPermission.getReadPermission(StepsRecord::class),
-                    HealthPermission.getReadPermission(HeartRateRecord::class)
-                )
-                val granted = client.permissionController.getGrantedPermissions()
-                result.success(mapOf(
-                    "steps" to (HealthPermission.getReadPermission(StepsRecord::class) in granted),
-                    "heartRate" to (HealthPermission.getReadPermission(HeartRateRecord::class) in granted),
-                    "allGranted" to required.all { it in granted }
-                ))
-            }
+            val required = setOf(
+                HealthPermission.getReadPermission(StepsRecord::class),
+                HealthPermission.getReadPermission(HeartRateRecord::class)
+            )
+            pendingPermissionResult = result
+            permissionLauncher.launch(required)
         } catch (e: Exception) {
-            result.success(mapOf("granted" to false, "error" to e.message))
+            Log.e(TAG, "requestPermissions failed to launch", e)
+            pendingPermissionResult = null
+            result.success(mapOf("steps" to false, "heartRate" to false, "allGranted" to false, "error" to (e.message ?: e.toString())))
         }
     }
 

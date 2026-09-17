@@ -36,6 +36,8 @@ class PermissionsPage extends StatelessWidget {
     }
 
     if (controller.errorMessage.value.isNotEmpty) {
+      final healthConnectMissing = !controller.isInitialized.value ||
+          controller.sdkStatus.value != 'available';
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -50,8 +52,20 @@ class PermissionsPage extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 24),
+              if (healthConnectMissing) ...[
+                ElevatedButton.icon(
+                  onPressed: () => controller.installHealthConnect(),
+                  icon: const Icon(Icons.system_update_alt),
+                  label: Text(
+                    controller.sdkStatus.value == 'update_required'
+                        ? 'Update Health Connect'
+                        : 'Install Health Connect',
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               ElevatedButton.icon(
-                onPressed: () => controller.requestPermissions(),
+                onPressed: () => controller.checkPermissions(),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
               ),

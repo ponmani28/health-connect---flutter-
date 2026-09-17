@@ -29,8 +29,12 @@ class HealthRepository {
   })  : _platformChannel = platformChannel ?? PlatformChannel(),
         _simSource = simSource ?? SimSource();
 
-  Future<bool> initialize() async {
+  Future<Map<String, dynamic>> initialize() async {
     return await _platformChannel.initialize();
+  }
+
+  Future<bool> openHealthConnectStore() async {
+    return await _platformChannel.openHealthConnectStore();
   }
 
   Future<Map<String, dynamic>> checkPermissions() async {

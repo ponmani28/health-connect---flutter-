@@ -11,14 +11,15 @@ class PlatformChannel {
   StreamSubscription? _eventSubscription;
   bool _initialized = false;
 
-  Future<bool> initialize() async {
-    if (_initialized) return true;
+  Future<Map<String, dynamic>> initialize() async {
+    if (_initialized) return {'available': true};
     try {
-      final result = await _method.invokeMethod<bool>('initialize');
-      _initialized = result ?? false;
-      return _initialized;
+      final result = await _method.invokeMethod<Map>('initialize');
+      final map = Map<String, dynamic>.from(result ?? {});
+      _initialized = map['available'] == true;
+      return map;
     } catch (e) {
-      return false;
+      return {'available': false, 'status': 'not_available', 'error': e.toString()};
     }
   }
 
@@ -87,6 +88,14 @@ class PlatformChannel {
   Future<bool> stopListening() async {
     try {
       return await _method.invokeMethod<bool>('stopListening') ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> openHealthConnectStore() async {
+    try {
+      return await _method.invokeMethod<bool>('openHealthConnectStore') ?? false;
     } catch (e) {
       return false;
     }

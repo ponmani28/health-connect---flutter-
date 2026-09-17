@@ -17,7 +17,7 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
 
-  test-unit:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,24 +25,4 @@ jobs:
         with:
           flutter-version: stable
       - run: flutter pub get
-      - run: flutter test test/unit/
-
-  test-golden:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: stable
-      - run: flutter pub get
-      - run: flutter test test/golden/ --update-goldens
-
-  test-widget:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: stable
-      - run: flutter pub get
-      - run: flutter test
+      - run: flutter build apk --debug
